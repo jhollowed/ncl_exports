@@ -1,0 +1,1 @@
+This directory is a staging area for NCL scripts which write their outputs to file; those files will be generated during an NCL call by one of the wrapper functions, placed here, read in by the wrapped, and automatically deleted once used. This directory will always be empty except during a run of one of the wrapper functions
