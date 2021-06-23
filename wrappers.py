@@ -12,7 +12,8 @@ def vertical_interp(file_in, var_name, level_option, output_levels,
     Parameters
     ----------
     file_in : PyNIO NioFile object
-        The file containing the date to interpolate
+        The file containing the date to interpolate. It is expected that the location 
+        of the file is stored as a string in the object's attrubute 'location'
     var_name : string
         Name of variable to interpolate. Rightmost dimensions should be nz x nx x ny.
     level_option : char
@@ -47,15 +48,5 @@ def vertical_interp(file_in, var_name, level_option, output_levels,
               'file_out':tmpout, 'interp':interp, 'extrap':extrap, 
               'P0':P0}
     file_out = call_ncl(ncl_parent, inputs, retrieve=tmpout)
-    pdb.set_trace()
+    file_out.set_option('MaskedArrayMode', 'MaskedNever')
     return file_out.variables[var_name].get_value()
-    
-
-    # if level_option = 'p', then make direct call to Ngl
-    # (code to perform this operation still exists in the wrapped ncl script, but is currently
-    #  not ever used)
-
-    #todo
-        
-
-    
