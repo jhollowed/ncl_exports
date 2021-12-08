@@ -50,3 +50,36 @@ def vertical_interp(file_in, var_name, level_option, output_levels,
     file_out = call_ncl(ncl_parent, inputs, retrieve=tmpout)
     file_out.set_option('MaskedArrayMode', 'MaskedNever')
     return file_out.variables[var_name].get_value()
+
+
+# --------------------------------------------------------------------
+
+
+def uv2sfvpF(u, v)
+    '''
+    Computes the stream function and velocity potential via spherical harmonics 
+    given u and v on a fixed grid. Simply wraps the NCL function uv2sfpF:
+    https://www.ncl.ucar.edu/Document/Functions/Built-in/uv2sfvpF-1.shtml
+
+    Parameters
+    ----------
+    u,v : float arrays
+        Wind components (input, arrays with two or more dimensions, rightmost two 
+        dimensions must be nlat x nlon)
+        -- input values must be in ascending latitude order
+        -- input array must be on a global grid
+
+    Returns
+    -------
+    The returned array will be dimensioned 2 x dimsizes(u), where the 0-th element 
+    of the leftmost dimension contains the stream function and the 1-th element of 
+    the leftmost dimension contains the velocity potential (both in ascending 
+    latitude order).
+    '''
+
+    ncl_parent = 'uv2sfvpF.ncl'
+    tmpout = tmpfile()
+    inputs = {'u:':u, 'v':v}
+    file_out = call_ncl(ncl_parent, inputs, retrieve=tmpout)
+    file_out.set_option('MaskedArrayMode', 'MaskedNever')
+    return file_out.variables['SF'].get_value()

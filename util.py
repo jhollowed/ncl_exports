@@ -71,6 +71,7 @@ def call_ncl(script, args, retrieve=None, dry=False):
             args[key] = "\"{}\"".format(val)
         # get source locaitons for all PyNio file objects
         if isinstance(val, Nio.NioFile):
+            pdb.set_trace()
             args[key] = "\"{}\"".format(val.location)
 
     # make system call
