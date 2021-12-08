@@ -38,8 +38,10 @@ def to_ncl_arr(x):
     -------
     The string-formatted array in NCL syntax
     '''
-
-    return '(/' + ','.join([str(k) for k in x]) + '/)'
+    s = '{}'.format((x[:]).tolist())
+    s = s.replace('[', '(/ ')
+    s = s.replace(']', ' /)')
+    return s
 
 
 def call_ncl(script, args, retrieve=None, dry=False):
@@ -63,16 +65,17 @@ def call_ncl(script, args, retrieve=None, dry=False):
 
     arg_names = args.keys()
     for i, (key,val) in enumerate(args.items()):
-        # prepare all arrays present in the input args in NCL syntax
-        if hasattr(val, "__len__"):
-            args[key] = to_ncl_arr(val)
         # add double quotes to all strings
         if isinstance(val, str):
             args[key] = "\"{}\"".format(val)
+        # prepare all arrays present in the input args in NCL syntax
+        elif hasattr(val, "__len__"):
+            args[key] = to_ncl_arr(val)
         # get source locaitons for all PyNio file objects
-        if isinstance(val, Nio.NioFile):
+        elif isinstance(val, Nio.NioFile):
             pdb.set_trace()
             args[key] = "\"{}\"".format(val.location)
+            val.close()
 
     # make system call
     print('calling {}'.format(script))

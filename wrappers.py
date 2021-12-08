@@ -1,5 +1,6 @@
 import Nio
 from util import *
+import xarray as xr
 
 # =======================================================================
 
@@ -55,7 +56,7 @@ def vertical_interp(file_in, var_name, level_option, output_levels,
 # --------------------------------------------------------------------
 
 
-def uv2sfvpF(u, v)
+def uv2sfvpF(u, v):
     '''
     Computes the stream function and velocity potential via spherical harmonics 
     given u and v on a fixed grid. Simply wraps the NCL function uv2sfpF:
@@ -76,10 +77,15 @@ def uv2sfvpF(u, v)
     the leftmost dimension contains the velocity potential (both in ascending 
     latitude order).
     '''
-
+    tmpin = tmpfile()
+    uu = xr.DataArray(data=u, name='U')
+    vv = xr.DataArray(data=v, name='V')
+    vset = xr.merge([uu, vv])
+    vset.to_netcdf(tmpin, format='NETCDF4_CLASSIC')
+   
     ncl_parent = 'uv2sfvpF.ncl'
     tmpout = tmpfile()
-    inputs = {'u:':u, 'v':v}
+    inputs = {'tmp_fname':tmpin, 'file_out':tmpout}
     file_out = call_ncl(ncl_parent, inputs, retrieve=tmpout)
-    file_out.set_option('MaskedArrayMode', 'MaskedNever')
+    file_out.set_option('MaskedArrayMode', 'MaskedNever') 
     return file_out.variables['SF'].get_value()
