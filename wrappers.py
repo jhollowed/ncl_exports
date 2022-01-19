@@ -1,4 +1,3 @@
-import Nio
 from util import *
 import xarray as xr
 
@@ -12,9 +11,8 @@ def vertical_interp(file_in, var_name, level_option, output_levels,
 
     Parameters
     ----------
-    file_in : PyNIO NioFile object
-        The file containing the date to interpolate. It is expected that the location 
-        of the file is stored as a string in the object's attrubute 'location'
+    file_in : string
+        The file containing the date to interpolate.
     var_name : string
         Name of variable to interpolate. Rightmost dimensions should be nz x nx x ny.
     level_option : char
@@ -49,7 +47,6 @@ def vertical_interp(file_in, var_name, level_option, output_levels,
               'file_out':tmpout, 'interp':interp, 'extrap':extrap, 
               'P0':P0}
     file_out = call_ncl(ncl_parent, inputs, retrieve=tmpout)
-    file_out.set_option('MaskedArrayMode', 'MaskedNever')
     return file_out.variables[var_name].get_value()
 
 
@@ -87,5 +84,38 @@ def uv2sfvpF(u, v):
     tmpout = tmpfile()
     inputs = {'tmp_fname':tmpin, 'file_out':tmpout}
     file_out = call_ncl(ncl_parent, inputs, retrieve=tmpout)
-    file_out.set_option('MaskedArrayMode', 'MaskedNever') 
     return file_out.variables['SF'].get_value()
+
+
+# --------------------------------------------------------------------
+
+
+def jw06_l2norm(file_in, norm_type=15):
+    '''
+    Computes the l2 norm (eq.14 or 15) from Jablonowski+Williamson 2006  (JW06). 
+    Intended to be run on output from the JW06 baroclinic wave dycore test case
+    via CESM in the "steady state" configuration
+
+    Parameters
+    ----------
+    file_in : string
+        The file containing the JW06 run output
+    norm_type : int
+        Either 14, in which case eq.14 from JW06 is computed and returned, or
+        15, in which case eq.15 from JW06 is compiuted and returned
+
+    Returns
+    -------
+    The l2 norm as a time series, matching the time samples of the original data
+    '''
+    
+    # call NCL script
+    ncl_parent = 'jablonowski_williamson_bw2006_l2_norm.ncl'
+    tmpout = tmpfile()
+    inputs = {'file_in':file_in, 'file_out':tmpout, 'norm_type':norm_type}
+    file_out = call_ncl(ncl_parent, inputs, retrieve=tmpout)
+    return file_out.variables['l2_norm'].values
+
+
+
+# --------------------------------------------------------------------
