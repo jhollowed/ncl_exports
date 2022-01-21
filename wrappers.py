@@ -78,13 +78,58 @@ def uv2sfvpF(u, v):
     uu = xr.DataArray(data=u, name='U')
     vv = xr.DataArray(data=v, name='V')
     vset = xr.merge([uu, vv])
-    vset.to_netcdf(tmpin, format='NETCDF4_CLASSIC')
+    vset.to_netcdf(tmpin, format='NETCDF4')
    
     ncl_parent = 'uv2sfvpF.ncl'
     tmpout = tmpfile()
     inputs = {'tmp_fname':tmpin, 'file_out':tmpout}
     file_out = call_ncl(ncl_parent, inputs, retrieve=tmpout)
-    return file_out.variables['SF'].get_value()
+    return file_out.variables['SF']
+
+
+# --------------------------------------------------------------------
+
+
+def dpres_hybrid_ccm(ps, hyai, hybi, p0=None):
+    '''
+    Calculates the pressure layer thicknesses of a hybrid coordinate system.
+    Simply wraps the NCL function dpres_hybrid_ccm:
+    https://www.ncl.ucar.edu/Document/Functions/Built-in/dpres_hybrid_ccm.shtml
+
+    Parameters
+    ----------
+    ps : float arrays
+        An array of at least 2 dimensions containing surface pressure data in Pa or hPa (mb). 
+        The two rightmost dimensions must be latitude and longitude.
+    p0 : float, optional
+        A scalar value equal to the surface reference pressure. Must have the same units as ps.
+        Default is None, in which case it will be set to 1000 hPa
+    hyai, hybi : float array
+        A one-dimensional array equal to the hybrid A, B interface coefficients
+
+    Returns
+    -------
+    The returned array will be dimensioned 2 x dimsizes(u), where the 0-th element 
+    of the leftmost dimension contains the stream function and the 1-th element of 
+    the leftmost dimension contains the velocity potential (both in ascending 
+    latitude order).
+    '''
+    tmpin = tmpfile()
+    ps = xr.DataArray(data=ps, name='PS')
+    hyai = xr.DataArray(data=hyai, name='hyai')
+    hybi = xr.DataArray(data=hybi, name='hybi')
+    if(p0 is not None):
+        p0 = xr.DataArray(data=p0, name='P0')
+        vset = xr.merge([ps, hyai, hybi, p0]):
+    else:
+        vset = xr.merge([ps, hyai, hybi]):
+    vset.to_netcdf(tmpin, format='NETCDF4')
+   
+    ncl_parent = 'dp_hybrid_ccm.ncl'
+    tmpout = tmpfile()
+    inputs = {'tmp_fname':tmpin, 'file_out':tmpout}
+    file_out = call_ncl(ncl_parent, inputs, retrieve=tmpout)
+    return file_out.variables['dp']
 
 
 # --------------------------------------------------------------------
