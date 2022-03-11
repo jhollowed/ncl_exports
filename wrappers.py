@@ -84,13 +84,13 @@ def uv2sfvpF(u, v):
     tmpout = tmpfile()
     inputs = {'tmp_fname':tmpin, 'file_out':tmpout}
     file_out = call_ncl(ncl_parent, inputs, retrieve=tmpout)
-    return file_out.variables['SF']
+    return file_out['SF']
 
 
 # --------------------------------------------------------------------
 
 
-def dpres_hybrid_ccm(ps, hyai, hybi, p0=None):
+def dpres_hybrid_ccm(ps, p0, hyai, hybi):
     '''
     Calculates the pressure layer thicknesses of a hybrid coordinate system.
     Simply wraps the NCL function dpres_hybrid_ccm:
@@ -101,9 +101,8 @@ def dpres_hybrid_ccm(ps, hyai, hybi, p0=None):
     ps : float arrays
         An array of at least 2 dimensions containing surface pressure data in Pa or hPa (mb). 
         The two rightmost dimensions must be latitude and longitude.
-    p0 : float, optional
+    p0 : float
         A scalar value equal to the surface reference pressure. Must have the same units as ps.
-        Default is None, in which case it will be set to 1000 hPa
     hyai, hybi : float array
         A one-dimensional array equal to the hybrid A, B interface coefficients
 
@@ -118,22 +117,58 @@ def dpres_hybrid_ccm(ps, hyai, hybi, p0=None):
     ps = xr.DataArray(data=ps, name='PS')
     hyai = xr.DataArray(data=hyai, name='hyai')
     hybi = xr.DataArray(data=hybi, name='hybi')
-    if(p0 is not None):
-        p0 = xr.DataArray(data=p0, name='P0')
-        vset = xr.merge([ps, hyai, hybi, p0]):
-    else:
-        vset = xr.merge([ps, hyai, hybi]):
+    p0 = xr.DataArray(data=p0, name='P0')
+   
+    vset = xr.merge([ps, hyai, hybi, p0])
     vset.to_netcdf(tmpin, format='NETCDF4')
    
-    ncl_parent = 'dp_hybrid_ccm.ncl'
+    ncl_parent = 'dpres_hybrid_ccm.ncl'
     tmpout = tmpfile()
     inputs = {'tmp_fname':tmpin, 'file_out':tmpout}
     file_out = call_ncl(ncl_parent, inputs, retrieve=tmpout)
-    return file_out.variables['dp']
+    return file_out['dp']
 
 
 # --------------------------------------------------------------------
 
+
+def omega_to_w(omega, p, t):
+    '''
+    Convert omega vertical velocity (Pa/s) to (m/s).
+    Simply wraps the NCL function omega_to_w:
+    https://www.ncl.ucar.edu/Document/Functions/Contributed/omega_to_w.shtml
+
+    Parameters
+    ----------
+    omega : float arrays
+        A variable of any dimensionality containing omega (Pa/s) Array size and shape must 
+        match p and t
+    p : float
+        A variable containing pressure values (Pa). Array size and shape must match omega and t
+    t : float array
+        A variable containing temperature (K). Array size and shape must match omega and p
+
+    Returns
+    -------
+    A double array is returned if omega is double, otherwise a float array of the same size and 
+    shape as omega is returned.
+    '''
+    tmpin = tmpfile()
+    omega = xr.DataArray(data=omega, name='OMEGA')
+    p = xr.DataArray(data=p, name='P')
+    t = xr.DataArray(data=t, name='T')
+   
+    vset = xr.merge([omega, p, t])
+    vset.to_netcdf(tmpin, format='NETCDF4')
+   
+    ncl_parent = 'omega_to_w.ncl'
+    tmpout = tmpfile()
+    inputs = {'tmp_fname':tmpin, 'file_out':tmpout}
+    file_out = call_ncl(ncl_parent, inputs, retrieve=tmpout)
+    return file_out['w']
+
+
+# --------------------------------------------------------------------
 
 def jw06_l2norm(file_in, norm_type=15):
     '''
