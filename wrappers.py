@@ -12,7 +12,7 @@ def vertical_interp(file_in, var_name, level_option, output_levels,
     Parameters
     ----------
     file_in : string
-        The file containing the date to interpolate.
+        The file containing the data to interpolate.
     var_name : string
         Name of variable to interpolate. Rightmost dimensions should be nz x nx x ny.
     level_option : char
@@ -53,6 +53,38 @@ def vertical_interp(file_in, var_name, level_option, output_levels,
 # --------------------------------------------------------------------
 
 
+def isentrope_interp(file_in, var_name, output_levels, pdim):
+    '''
+    Interpolates data defined at model levels to isosurfaces of potential temperature
+
+    Parameters
+    ----------
+    file_in : string
+        The file containing the date to interpolate.
+    var_name : string
+        Name of variable to interpolate.
+    output_levels : 1D float array
+        Monotonic array giving level values at which to interpolate the variable, in Kelvin
+    pdim : int
+        index of the vertical level dimension of the input data
+
+    Returns
+    -------
+    The variable interpolated to the given vertical positions.
+    '''
+    
+    # call NCL script
+    ncl_parent = 'isentrope_interp.ncl'
+    tmpout = tmpfile()
+    inputs = {'var_name':var_name, 'output_levels':output_levels, 'pdim':pdim,
+              'file_in':file_in, 'file_out':tmpout}
+    file_out = call_ncl(ncl_parent, inputs, retrieve=tmpout)
+    return file_out.rename({'LEV':'theta'})[var_name]
+
+
+# --------------------------------------------------------------------
+
+
 def uv2sfvpF(u, v):
     '''
     Computes the stream function and velocity potential via spherical harmonics 
@@ -85,6 +117,85 @@ def uv2sfvpF(u, v):
     inputs = {'tmp_fname':tmpin, 'file_out':tmpout}
     file_out = call_ncl(ncl_parent, inputs, retrieve=tmpout)
     return file_out['SF']
+
+
+# --------------------------------------------------------------------
+
+
+def trop_wmo(p, t):
+    '''
+    Determines the level of the thermal tropopause. Simply wraps the NCL function trop_wmo:
+    https://www.ncl.ucar.edu/Document/Functions/Built-in/trop_wmo.shtml
+
+    Parameters
+    ----------
+    p : float array
+        An array of any dimensionality containing input pressure levels. The pressure values 
+        must be monotonically increasing (top-to-bottom). If multi-dimensional, it must be the 
+        same size and shape as t. The level dimension must be in the rightmost position. Expected
+        unit for this wrapper is hectopascals.
+    t : float array
+        An array of any dimensionality containing the temperatures. Missing data are not allowed. 
+        The units must be degrees Kelvin. If multi-dimensional, the level dimension must be in the 
+        rightmost position.
+
+    Returns
+    -------
+    The returned array will be dimensioned 2 x dimsizes(u), where the 0-th element 
+    of the leftmost dimension contains the stream function and the 1-th element of 
+    the leftmost dimension contains the velocity potential (both in ascending 
+    latitude order).
+    '''
+    tmpin = tmpfile()
+    if(type(p) is not xr.core.dataarray.DataArray):
+        p = xr.DataArray(data=p, name='p')
+    if(type(t) is not xr.core.dataarray.DataArray):
+        t = xr.DataArray(data=t, name='T')
+    vset = xr.merge([p, t])
+    vset.to_netcdf(tmpin, format='NETCDF4')
+   
+    ncl_parent = 'trop_wmo.ncl'
+    tmpout = tmpfile()
+    inputs = {'tmp_fname':tmpin, 'file_out':tmpout}
+    file_out = call_ncl(ncl_parent, inputs, retrieve=tmpout)
+    return file_out['TROP_T']
+
+
+# --------------------------------------------------------------------
+
+
+def wgt_vertical_n(p, t):
+    '''
+    Calculates a weighted vertical average and/or sum (integral):
+    https://www.ncl.ucar.edu/Document/Functions/Contributed/wgt_vertical_n.shtml
+
+    Parameters
+    ----------
+    x : float array
+        Array to be integrated or averaged. No missing data allowed.
+    dp : float array
+        Pressure thicknesses computed by dpres_hybrid_ccm or dpres_plevel. These 
+        are the 'weights' associated with each level. This should have the same 
+        dimensionality as x.
+
+    Returns
+    -------
+    An array of of one less rank than the input x
+    '''
+    tmpin = tmpfile()
+    if(type(p) is not xr.core.dataarray.DataArray):
+        x = xr.DataArray(data=x, name='X')
+    if(type(t) is not xr.core.dataarray.DataArray):
+        dp = xr.DataArray(data=dp, name='dp')
+    vset = xr.merge([x, dp])
+    vset.to_netcdf(tmpin, format='NETCDF4')
+   
+    ncl_parent = 'wgt_vertrical_n.ncl'
+    tmpout = tmpfile()
+    inputs = {'tmp_fname':tmpin, 'file_out':tmpout}
+    file_out = call_ncl(ncl_parent, inputs, retrieve=tmpout)
+    return file_out['VERT_AVG_X']
+
 
 
 # --------------------------------------------------------------------

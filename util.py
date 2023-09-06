@@ -23,6 +23,16 @@ def tmpfile():
     return tmp + '/' + ''.join(random.choice(chars) for i in range(10)) + '.nc'
 
 
+def clear_tmp():
+    '''
+    Deletes any temporary files in tmp
+    '''
+    try:
+        os.remove('{}/*.nc'.format(tmp))
+    except OSError:
+        pass
+
+
 def to_ncl_arr(x):
     '''
     Returns the array x as a string, formatted for NCL command line input
@@ -86,6 +96,8 @@ def call_ncl(script, args, retrieve=None, dry=False):
         return 0
 
     # retrieve, clean tmp directory
+    if('tmp_fname' in arg_names):
+        os.system('rm ' + args['tmp_fname'])
     if retrieve is not None:
         print('retrieving {}'.format(retrieve))
         f = xr.open_dataset(retrieve)
